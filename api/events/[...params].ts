@@ -154,6 +154,7 @@ async function handleGetEvent(req: any, res: any, slug: string) {
     return res.status(500).json({ error: "Database error" });
   }
   if (!event) {
+    console.error("[Events] Nenhum evento publicado para slug:", JSON.stringify(slug));
     return res.status(404).json({ error: "Not found" });
   }
 
@@ -355,14 +356,20 @@ async function handleCodigo(req: any, res: any, slug: string) {
 }
 
 export default async function handler(req: any, res: any) {
-  const params: string[] = Array.isArray(req.query.params)
-    ? req.query.params
-    : req.query.params
-    ? [req.query.params]
+  // O runtime da Vercel para catch-all (fora do Next.js) devolve req.query.params
+  // como string única com barras ("ey-30-jul/dieta"), não como array — ao
+  // contrário do Next.js. Aceita as duas formas para não depender de qual
+  // convenção está mesmo em vigor nesta versão do builder.
+  const raw = req.query.params;
+  const params: string[] = Array.isArray(raw)
+    ? raw
+    : typeof raw === "string" && raw.length > 0
+    ? raw.split("/")
     : [];
   const [slug, action] = params;
 
   if (!slug) {
+    console.error("[Events] Sem slug — req.query:", JSON.stringify(req.query), "url:", req.url);
     return res.status(404).json({ error: "Not found" });
   }
 
