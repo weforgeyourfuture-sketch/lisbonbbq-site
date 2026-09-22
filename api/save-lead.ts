@@ -61,7 +61,8 @@ function internalEmail(lead: any, opts: { incomplete?: boolean } = {}) {
     <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>
     <tr><td>Email</td><td>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : "—"}</td></tr>
     <tr><td>Telefone</td><td>${c.phone || "—"}</td></tr>
-    <tr><td>Empresa</td><td>${lead.corporate?.company || "—"}</td></tr>
+    <tr><td>Local</td><td>${lead.summary?.location || "A decidir"}</td></tr>
+    <tr><td>Tipo de churrasco</td><td>${lead.corporate?.bbqStyle ? traditionLabel(lead.corporate.bbqStyle) : "Ainda não sei"}</td></tr>
     <tr><td>Data do Evento</td><td>${lead.corporate?.date ? formatDate(lead.corporate.date) : "Por confirmar — ver mensagem"}</td></tr>
     <tr><td>Convidados</td><td>${lead.corporate?.guests || b.guests || "—"} pax</td></tr>
     <tr><td>Mensagem</td><td>${escapeHtml(lead.corporate?.message) || "—"}</td></tr>
@@ -122,7 +123,6 @@ function confirmationEmail(lead: any, lang: "pt" | "en" = "pt") {
     rTradition: en ? "Tradition" : "Tradição",
     rSlot: en ? "Time" : "Horário",
     rGuests: en ? "Guests" : "Convidados",
-    rCompany: en ? "Company" : "Empresa",
     pax: en ? "pax" : "pax",
     any: en
       ? "Any questions, just reply to this email or contact us directly."
@@ -136,7 +136,8 @@ function confirmationEmail(lead: any, lang: "pt" | "en" = "pt") {
   const rows = isCorporate
     ? `
       ${lead.corporate?.date ? `<tr><td>${T.rDate}</td><td>${formatDate(lead.corporate.date, lang)}</td></tr>` : ""}
-      <tr><td>${T.rCompany}</td><td>${lead.corporate?.company || lead.company || "—"}</td></tr>
+      <tr><td>${T.rVenue}</td><td>${lead.summary?.location || (en ? "To be decided" : "A decidir")}</td></tr>
+      <tr><td>${T.rTradition}</td><td>${lead.corporate?.bbqStyle ? traditionLabel(lead.corporate.bbqStyle, lang) : (en ? "Not decided yet" : "Ainda não sei")}</td></tr>
       <tr><td>${T.rGuests}</td><td>${lead.corporate?.guests || b.guests || "—"} ${T.pax}</td></tr>`
     : `
       <tr><td>${T.rDate}</td><td>${formatDate(b.date, lang)}</td></tr>

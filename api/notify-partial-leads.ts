@@ -28,11 +28,33 @@ function traditionLabel(t: string) {
 function internalEmail(lead: any, opts: { incomplete?: boolean } = {}) {
   const b = lead.booking || {};
   const c = lead.client || {};
+  const isCorporate = lead.source === "corporate";
   const extras = (lead.extras || []).map((e: any) => e.qty > 1 ? `${e.name} ×${e.qty}` : e.name).join(", ") || "Nenhum";
   const title = opts.incomplete ? "⏳ Lead incompleta — LisbonBBQ" : "🔥 Nova Reserva — LisbonBBQ";
   const banner = opts.incomplete
     ? `<p style="margin:0 0 16px;padding:12px 16px;background:#FFF3CD;border-left:4px solid #FFD600;font-size:14px;color:#664d03;">O cliente começou o pedido mas <strong>não finalizou</strong> nos 5 minutos seguintes. Abaixo estão os dados que o site conseguiu recolher.</p>`
     : "";
+
+  // O capture parcial do form corporate só recolhe nome + email + telemóvel —
+  // mostrar os campos de reserva (local, tradição, horário...) ficaria tudo a
+  // "—" e parecia uma lead de reserva quebrada em vez de um lead corporate.
+  const rows = isCorporate
+    ? `
+    <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>
+    <tr><td>Email</td><td>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : "—"}</td></tr>
+    <tr><td>Telefone</td><td>${c.phone || "—"}</td></tr>
+    <tr><td>ID</td><td style="font-size:12px;color:#999">${lead.id || "—"}</td></tr>`
+    : `
+    <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>
+    <tr><td>Email</td><td>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : "—"}</td></tr>
+    <tr><td>Telefone</td><td>${c.phone || "—"}</td></tr>
+    <tr><td>Data do Evento</td><td>${formatDate(b.date)}</td></tr>
+    <tr><td>Local</td><td>${lead.summary?.location || b.locationId || "—"}</td></tr>
+    <tr><td>Tradição</td><td><span class="badge">${traditionLabel(b.tradition)}</span></td></tr>
+    <tr><td>Horário</td><td>${b.slot || "—"}</td></tr>
+    <tr><td>Convidados</td><td>${b.guests || "—"} pax</td></tr>
+    <tr><td>Extras</td><td>${extras}</td></tr>
+    <tr><td>ID</td><td style="font-size:12px;color:#999">${lead.id || "—"}</td></tr>`;
 
   return `
 <!DOCTYPE html>
@@ -50,17 +72,7 @@ function internalEmail(lead: any, opts: { incomplete?: boolean } = {}) {
 <div class="card">
   <h1>${title}</h1>
   ${banner}
-  <table>
-    <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>
-    <tr><td>Email</td><td>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : "—"}</td></tr>
-    <tr><td>Telefone</td><td>${c.phone || "—"}</td></tr>
-    <tr><td>Data do Evento</td><td>${formatDate(b.date)}</td></tr>
-    <tr><td>Local</td><td>${lead.summary?.location || b.locationId || "—"}</td></tr>
-    <tr><td>Tradição</td><td><span class="badge">${traditionLabel(b.tradition)}</span></td></tr>
-    <tr><td>Horário</td><td>${b.slot || "—"}</td></tr>
-    <tr><td>Convidados</td><td>${b.guests || "—"} pax</td></tr>
-    <tr><td>Extras</td><td>${extras}</td></tr>
-    <tr><td>ID</td><td style="font-size:12px;color:#999">${lead.id || "—"}</td></tr>
+  <table>${rows}
   </table>
 </div>
 </body>
@@ -79,8 +91,10 @@ const WAIT_MINUTES = 5;
  * data the site managed to collect. Idempotent: every processed row is stamped
  * with `partial_notified_at` so it is never emailed twice.
  *
- * Discriminator: partial leads have a NULL top-level `email` column (the email is
- * only collected on the final submission); completed/corporate leads do not.
+ * Discriminator: partial leads are stamped with `stage: "partial"` in `data`.
+ * Not the top-level `email` column — o capture parcial do form corporate já
+ * recolhe o email antes do telemóvel, por isso essa coluna não fica a NULL
+ * como no capture parcial da homepage (nome + telefone, sem email).
  */
 export default async function handler(req: any, res: any) {
   // Auth: the scheduler sends the SHA-256 of the service-role key (a non-secret
@@ -102,7 +116,7 @@ export default async function handler(req: any, res: any) {
     const { data: partials, error: pErr } = await supabase
       .from("leads")
       .select("id, created_at, data")
-      .is("email", null)
+      .eq("data->>stage", "partial")
       .is("partial_notified_at", null)
       .lte("created_at", dueBefore);
     if (pErr) throw pErr;
