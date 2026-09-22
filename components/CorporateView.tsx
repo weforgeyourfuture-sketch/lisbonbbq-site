@@ -8,7 +8,7 @@ interface CorporateViewProps {
   lang: 'pt' | 'en';
   onBack: () => void;
   onSubmit: (data: any) => Promise<boolean>;
-  onPartialCapture: (data: { name: string; email: string; phone: string }) => void;
+  onPartialCapture: (data: { name: string; email: string; phone: string; locationId: string; bbqStyle: string; guests: string; date: string; message: string }) => void;
   isSending: boolean;
 }
 
@@ -59,7 +59,9 @@ export const CorporateView: React.FC<CorporateViewProps> = ({ lang, onSubmit, on
   });
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | false>(false);
-  const [partialCaptured, setPartialCaptured] = useState(false);
+  const partialCapturedRef = useRef(false);
+  const formDataRef = useRef(formData);
+  formDataRef.current = formData;
   const [gallery, setGallery] = useState<{ name: string; images: string[]; index: number } | null>(null);
   const heroVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -118,15 +120,29 @@ export const CorporateView: React.FC<CorporateViewProps> = ({ lang, onSubmit, on
     setFormData(prev => ({ ...prev, guests: digitsOnly }));
   };
 
-  // Lead capture parcial: assim que nome + email + telemóvel estão preenchidos,
-  // grava o lead mesmo que a pessoa não termine o resto do formulário.
-  const handlePhoneBlur = () => {
-    if (partialCaptured) return;
-    if (formData.name.trim() && formData.email.trim() && formData.phone.trim()) {
-      setPartialCaptured(true);
-      onPartialCapture({ name: formData.name, email: formData.email, phone: formData.phone });
-    }
-  };
+  // Lead capture parcial: se a pessoa sair da página (mudar de separador,
+  // fechar) sem submeter, grava o que já tinha preenchido — não só nome e
+  // contacto, mas também local, convidados, data, churrasco e mensagem, tal
+  // como estavam no momento em que saiu.
+  useEffect(() => {
+    const trySendPartial = () => {
+      if (partialCapturedRef.current) return;
+      const d = formDataRef.current;
+      if (d.name.trim() && d.email.trim() && d.phone.trim()) {
+        partialCapturedRef.current = true;
+        onPartialCapture({ ...d });
+      }
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') trySendPartial();
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    window.addEventListener('pagehide', trySendPartial);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+      window.removeEventListener('pagehide', trySendPartial);
+    };
+  }, [onPartialCapture]);
 
   const showDetails = formData.phone.trim().length > 0;
 
@@ -141,7 +157,7 @@ export const CorporateView: React.FC<CorporateViewProps> = ({ lang, onSubmit, on
     if (success) {
       setSubmitted(true);
       setFormData({ name: '', email: '', phone: '', locationId: '', bbqStyle: '', guests: '', date: '', message: '' });
-      setPartialCaptured(false);
+      partialCapturedRef.current = false;
     } else {
       setError(pt ? 'Erro ao enviar. Tenta novamente ou WhatsApp.' : 'Error sending. Try again or WhatsApp.');
     }
@@ -657,7 +673,7 @@ export const CorporateView: React.FC<CorporateViewProps> = ({ lang, onSubmit, on
                     <input required type="email" name="email" value={formData.email} onChange={handleFormChange} placeholder={pt ? 'nome@empresa.pt' : 'name@company.com'} className={inputClass} />
                   </label>
                   <label className={labelClass}>{pt ? 'Telemóvel' : 'Phone'}
-                    <input required type="tel" name="phone" value={formData.phone} onChange={handleFormChange} onBlur={handlePhoneBlur} placeholder="+351" className={inputClass} />
+                    <input required type="tel" name="phone" value={formData.phone} onChange={handleFormChange} placeholder="+351" className={inputClass} />
                   </label>
                 </div>
                 {showDetails && (

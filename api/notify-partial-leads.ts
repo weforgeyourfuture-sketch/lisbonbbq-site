@@ -25,6 +25,15 @@ function traditionLabel(t: string) {
   return ({ brazilian: "Churrasco Brasileiro 🇧🇷", portuguese: "Churrasco Português 🇵🇹", argentinian: "Asado Argentino 🇦🇷" } as Record<string, string>)[t] || t || "—";
 }
 
+function escapeHtml(text: string | undefined) {
+  if (!text) return "";
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 function internalEmail(lead: any, opts: { incomplete?: boolean } = {}) {
   const b = lead.booking || {};
   const c = lead.client || {};
@@ -35,14 +44,19 @@ function internalEmail(lead: any, opts: { incomplete?: boolean } = {}) {
     ? `<p style="margin:0 0 16px;padding:12px 16px;background:#FFF3CD;border-left:4px solid #FFD600;font-size:14px;color:#664d03;">O cliente começou o pedido mas <strong>não finalizou</strong> nos 5 minutos seguintes. Abaixo estão os dados que o site conseguiu recolher.</p>`
     : "";
 
-  // O capture parcial do form corporate só recolhe nome + email + telemóvel —
-  // mostrar os campos de reserva (local, tradição, horário...) ficaria tudo a
-  // "—" e parecia uma lead de reserva quebrada em vez de um lead corporate.
+  // O capture parcial do form corporate grava o que já estava preenchido no
+  // momento em que a pessoa saiu da página — mostra os mesmos campos do
+  // email final, cada um com "—"/"A decidir"/"Ainda não sei" quando vazio.
   const rows = isCorporate
     ? `
     <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>
     <tr><td>Email</td><td>${c.email ? `<a href="mailto:${c.email}">${c.email}</a>` : "—"}</td></tr>
     <tr><td>Telefone</td><td>${c.phone || "—"}</td></tr>
+    <tr><td>Local</td><td>${lead.summary?.location || "A decidir"}</td></tr>
+    <tr><td>Tipo de churrasco</td><td>${lead.corporate?.bbqStyle ? traditionLabel(lead.corporate.bbqStyle) : "Ainda não sei"}</td></tr>
+    <tr><td>Data do Evento</td><td>${lead.corporate?.date ? formatDate(lead.corporate.date) : "—"}</td></tr>
+    <tr><td>Convidados</td><td>${lead.corporate?.guests || "—"} pax</td></tr>
+    <tr><td>Mensagem</td><td>${escapeHtml(lead.corporate?.message) || "—"}</td></tr>
     <tr><td>ID</td><td style="font-size:12px;color:#999">${lead.id || "—"}</td></tr>`
     : `
     <tr><td>Cliente</td><td>${c.name || "—"}</td></tr>

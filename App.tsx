@@ -315,19 +315,28 @@ const App: React.FC = () => {
     return success;
   };
 
-  // Lead capture parcial do form corporate — grava assim que nome + email +
-  // telemóvel estão preenchidos, mesmo que a pessoa não termine o formulário.
-  const handleCorporatePartialLead = async (data: { name: string; email: string; phone: string }) => {
+  // Lead capture parcial do form corporate — dispara quando a pessoa sai da
+  // página sem submeter (ver useEffect em CorporateView), e grava o que já
+  // tinha preenchido até esse momento: não só nome/email/telemóvel, mas
+  // também local, convidados, data, churrasco e mensagem, se já lá estavam.
+  const handleCorporatePartialLead = async (data: any) => {
+    const eventDateIso = data.date ? `${data.date}T12:00:00.000Z` : null;
+    const locationName = data.locationId
+      ? (data.locationId === OWN_LOCATION_ID ? OWN_LOCATION_NAME : (LOCATIONS.find(l => l.id === data.locationId)?.name || null))
+      : null;
+
     const partialLead = {
       id: `LB-${Date.now()}`,
       timestamp: new Date().toISOString(),
       stage: 'partial',
       client: { name: data.name, email: data.email, phone: data.phone },
+      corporate: { guests: data.guests || null, bbqStyle: data.bbqStyle || null, message: data.message || '', date: eventDateIso },
       source: 'corporate',
       lang,
       name: data.name,
       email: data.email,
-      phone: data.phone
+      phone: data.phone,
+      summary: { location: locationName }
     };
     await cloudService.saveLead(partialLead);
     track('lead_capture_submitted', { source: 'corporate' });
