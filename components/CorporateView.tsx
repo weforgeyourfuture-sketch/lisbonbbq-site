@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Flame, Check, MessageCircle, Images, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LOCATIONS, OWN_LOCATION_ID, OWN_LOCATION_NAME } from '../constants';
 import { responsiveImage } from '../services/responsiveImage';
+import { RecentEvents } from './RecentEvents';
 
 interface CorporateViewProps {
   lang: 'pt' | 'en';
@@ -508,6 +509,9 @@ export const CorporateView: React.FC<CorporateViewProps> = ({ lang, onSubmit, is
           </div>
         </div>
       </section>
+
+      {/* RECENT EVENTS — mesmo bloco da homepage (dados do Supabase) */}
+      <RecentEvents lang={lang} />
 
       {/* INCLUDED + OCCASIONS */}
       <section className="relative pt-24">
