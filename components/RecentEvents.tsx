@@ -56,7 +56,7 @@ export const RecentEvents: React.FC<Props> = ({ lang }) => {
     <section className="py-24 px-4 bg-bbq-cream border-b-4 border-bbq-black">
       <div className="max-w-6xl mx-auto">
         <h2 className="text-5xl md:text-6xl font-black uppercase tracking-tighter leading-none mb-4">
-          {pt ? 'Eventos' : 'Recent'} <span className="text-bbq-red">{pt ? 'Recentes' : 'Events'}</span>
+          {pt ? 'Eventos' : 'Latest'} <span className="text-bbq-red">{pt ? 'mais recentes' : 'Events'}</span>
         </h2>
         <div className="h-2 w-24 bg-bbq-red mb-12"></div>
 
