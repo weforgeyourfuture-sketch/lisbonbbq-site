@@ -533,6 +533,9 @@ async function createCheckout(req: any, res: any) {
         description: productName,
         metadata: { booking_id: booking.id, edition_id: ed.id, kind: "workshop" },
       },
+      // Embebido: liga a recolha de telemóvel para a página poder pré-preencher o número
+      // que já pedimos no formulário (ex.: MB Way). Sem isto a Stripe recusa o valor.
+      ...(b.embedded === true ? { phone_number_collection: { enabled: true } } : {}),
       ...sessionUi(
         b.embedded === true,
         `${origin}/workshop?reserva=ok&session_id={CHECKOUT_SESSION_ID}${lang === "en" ? "&lang=en" : ""}`,
